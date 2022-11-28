@@ -1,6 +1,27 @@
 const { response } = require('express')
 const express = require('express')
+const bodyParser = require('body-parser')
+const morgan = require('morgan')
+const cors = require('cors')
+
+
+
 const app = express()
+app.use(cors())
+
+app.use(bodyParser.json())
+
+
+morgan.token('person', (req) => {
+    if (req.method === 'POST') return JSON.stringify(req.body)
+    return null
+  })
+
+  app.use(
+    morgan(
+      ':method :url :status :res[content-length] - :response-time ms :person',
+    ),
+  )
 
 let persons = [
     {
@@ -53,15 +74,56 @@ app.get('/api/persons/:id', (request, response) => {
 
 app.delete('/api/persons/:id', (request, response) => {
     const id = Number(request.params.id)
-    const person = persons.filter(person => person.id !== id
+   persons = persons.filter(person => person.id !== id
     )
     response.status(204).end()
 
- 
+
 })
 
-const PORT = 3001
+
+const generateId =() => Math.floor(Math.random() * 100000000)
+
+
+app.post('/api/persons', (request, response) => {
+    const body = request.body
+
+    console.log(body)
+
+    if (!body.name && body.name === "") {
+        return response.status(400).json({
+            error: 'name missing'
+        })
+    }
+
+    if (!body.number && body.number === "") {
+        return response.status(400).json({
+            error: 'number missing'
+        })
+    }
+
+    const existing = persons.find(person => body.name === person.name)
+
+    if (existing) {
+        return response.status(400).json({
+            error: 'name already exists in the phonebook'
+        })
+    }
+
+    const person = {
+        name: body.name,
+        number: body.number,
+        id: generateId()
+    }
+
+    persons = persons.concat(person)
+    response.json(person)
+})
+
+
+
+const PORT = process.env.PORT || 3001
 app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`)
+  console.log(`Server running on port ${PORT}`)
 })
 
